@@ -1,1 +1,522 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Class Drag & Drop Challenge</title>
 
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 25px;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .info {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #555;
+            font-size: 16px;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 25px;
+            align-items: start;
+        }
+
+        .student-panel {
+            background: white;
+            border-radius: 14px;
+            padding: 15px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .student-panel h2 {
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .student-list {
+            min-height: 460px;
+            border: 2px dashed #bbb;
+            border-radius: 12px;
+            padding: 10px;
+            background: #fafafa;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-content: flex-start;
+        }
+
+        .student {
+            padding: 8px 10px;
+            background: #2563eb;
+            color: white;
+            border-radius: 8px;
+            cursor: grab;
+            user-select: none;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .student:hover {
+            background: #1d4ed8;
+            transform: scale(1.05);
+        }
+
+        .student.dragging {
+            opacity: 0.45;
+        }
+
+        .classes-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .class-box {
+            background: white;
+            border-radius: 14px;
+            padding: 12px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+            border: 3px solid transparent;
+            transition: 0.2s;
+        }
+
+        .class-box.drag-over {
+            border-color: #22c55e;
+            background: #ecfdf5;
+        }
+
+        .class-box.full {
+            border-color: #ef4444;
+            background: #fff1f2;
+        }
+
+        .class-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .capacity {
+            font-size: 13px;
+            background: #e5e7eb;
+            padding: 4px 9px;
+            border-radius: 999px;
+        }
+
+        .students-inside {
+            border: 2px dashed #bbb;
+            border-radius: 10px;
+            padding: 10px;
+            background: #fafafa;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-content: flex-start;
+        }
+
+        /* Farklı boyutlu sınıf kutuları */
+
+        .box-small {
+            width: 220px;
+        }
+
+        .box-medium {
+            width: 270px;
+        }
+
+        .box-large {
+            width: 320px;
+        }
+
+        .box-xlarge {
+            width: 370px;
+        }
+
+        .box-short .students-inside {
+            min-height: 120px;
+        }
+
+        .box-normal .students-inside {
+            min-height: 170px;
+        }
+
+        .box-tall .students-inside {
+            min-height: 220px;
+        }
+
+        .message {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: 12px;
+            background: #111827;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            min-height: 55px;
+        }
+
+        .success {
+            color: #22c55e;
+        }
+
+        .warning {
+            color: #facc15;
+        }
+
+        .error {
+            color: #f87171;
+        }
+
+        button {
+            margin-top: 15px;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            background: #111827;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #374151;
+        }
+
+        @media (max-width: 900px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+
+            .class-box {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Student Class Drag & Drop Challenge</h1>
+
+<div class="info">
+    25 öğrenciyi 5 farklı sınıfa sürükle. 
+    Sınıf doluysa öğrenci otomatik olarak sonraki uygun sınıfa aktarılır.
+</div>
+
+<div class="main-container">
+
+    <!-- Öğrenci Havuzu -->
+    <div class="student-panel">
+        <h2>Öğrenciler</h2>
+
+        <div 
+            id="studentPool"
+            class="student-list drop-area"
+            data-testid="student-pool">
+        </div>
+
+        <button id="resetButton" data-testid="reset-button">
+            Sıfırla
+        </button>
+    </div>
+
+    <!-- Sınıflar -->
+    <div>
+        <div class="classes-container">
+
+            <div 
+                class="class-box box-small box-short"
+                data-capacity="3"
+                data-class-index="0"
+                data-testid="class-1">
+
+                <div class="class-header">
+                    <span>Sınıf 1</span>
+                    <span class="capacity" data-testid="capacity-1">0 / 3</span>
+                </div>
+
+                <div 
+                    class="students-inside drop-area"
+                    data-testid="class-1-students">
+                </div>
+            </div>
+
+            <div 
+                class="class-box box-medium box-normal"
+                data-capacity="6"
+                data-class-index="1"
+                data-testid="class-2">
+
+                <div class="class-header">
+                    <span>Sınıf 2</span>
+                    <span class="capacity" data-testid="capacity-2">0 / 6</span>
+                </div>
+
+                <div 
+                    class="students-inside drop-area"
+                    data-testid="class-2-students">
+                </div>
+            </div>
+
+            <div 
+                class="class-box box-large box-normal"
+                data-capacity="7"
+                data-class-index="2"
+                data-testid="class-3">
+
+                <div class="class-header">
+                    <span>Sınıf 3</span>
+                    <span class="capacity" data-testid="capacity-3">0 / 7</span>
+                </div>
+
+                <div 
+                    class="students-inside drop-area"
+                    data-testid="class-3-students">
+                </div>
+            </div>
+
+            <div 
+                class="class-box box-xlarge box-tall"
+                data-capacity="8"
+                data-class-index="3"
+                data-testid="class-4">
+
+                <div class="class-header">
+                    <span>Sınıf 4</span>
+                    <span class="capacity" data-testid="capacity-4">0 / 8</span>
+                </div>
+
+                <div 
+                    class="students-inside drop-area"
+                    data-testid="class-4-students">
+                </div>
+            </div>
+
+            <div 
+                class="class-box box-medium box-short"
+                data-capacity="5"
+                data-class-index="4"
+                data-testid="class-5">
+
+                <div class="class-header">
+                    <span>Sınıf 5</span>
+                    <span class="capacity" data-testid="capacity-5">0 / 5</span>
+                </div>
+
+                <div 
+                    class="students-inside drop-area"
+                    data-testid="class-5-students">
+                </div>
+            </div>
+
+        </div>
+
+        <div id="message" class="message" data-testid="message">
+            Öğrencileri sınıflara sürükle.
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const studentPool = document.getElementById("studentPool");
+    const messageBox = document.getElementById("message");
+    const resetButton = document.getElementById("resetButton");
+
+    let draggedStudent = null;
+
+    createStudents();
+    addDropEvents();
+    updateAllCounters();
+
+    resetButton.addEventListener("click", resetGame);
+
+    function createStudents() {
+        studentPool.innerHTML = "";
+
+        for (let i = 1; i <= 25; i++) {
+            const student = document.createElement("div");
+
+            student.className = "student";
+            student.draggable = true;
+            student.id = `student-${i}`;
+            student.setAttribute("data-testid", `student-${i}`);
+            student.textContent = `Öğrenci${i}`;
+
+            student.addEventListener("dragstart", dragStart);
+            student.addEventListener("dragend", dragEnd);
+
+            studentPool.appendChild(student);
+        }
+    }
+
+    function dragStart(event) {
+        draggedStudent = event.target;
+        event.target.classList.add("dragging");
+
+        event.dataTransfer.setData("text/plain", event.target.id);
+    }
+
+    function dragEnd(event) {
+        event.target.classList.remove("dragging");
+        draggedStudent = null;
+
+        document.querySelectorAll(".class-box").forEach(box => {
+            box.classList.remove("drag-over");
+        });
+    }
+
+    function addDropEvents() {
+        const dropAreas = document.querySelectorAll(".drop-area");
+
+        dropAreas.forEach(area => {
+            area.addEventListener("dragover", event => {
+                event.preventDefault();
+
+                const classBox = area.closest(".class-box");
+
+                if (classBox) {
+                    classBox.classList.add("drag-over");
+                }
+            });
+
+            area.addEventListener("dragleave", () => {
+                const classBox = area.closest(".class-box");
+
+                if (classBox) {
+                    classBox.classList.remove("drag-over");
+                }
+            });
+
+            area.addEventListener("drop", dropStudent);
+        });
+    }
+
+    function dropStudent(event) {
+        event.preventDefault();
+
+        const studentId = event.dataTransfer.getData("text/plain");
+        const student = document.getElementById(studentId);
+
+        if (!student) {
+            return;
+        }
+
+        const targetArea = event.currentTarget;
+
+        // Öğrenci havuzuna geri bırakılırsa
+        if (targetArea.id === "studentPool") {
+            studentPool.appendChild(student);
+
+            showMessage(
+                `${student.textContent} öğrenci havuzuna geri alındı.`,
+                "warning"
+            );
+
+            updateAllCounters();
+            return;
+        }
+
+        const targetClassBox = targetArea.closest(".class-box");
+
+        if (!targetClassBox) {
+            return;
+        }
+
+        const targetIndex = Number(targetClassBox.dataset.classIndex);
+
+        placeStudentToAvailableClass(student, targetIndex);
+        updateAllCounters();
+    }
+
+    function placeStudentToAvailableClass(student, startIndex) {
+        const classBoxes = Array.from(document.querySelectorAll(".class-box"));
+
+        for (let i = startIndex; i < classBoxes.length; i++) {
+            const classBox = classBoxes[i];
+            const capacity = Number(classBox.dataset.capacity);
+            const studentContainer = classBox.querySelector(".students-inside");
+            const currentCount = studentContainer.querySelectorAll(".student").length;
+
+            if (currentCount < capacity) {
+                studentContainer.appendChild(student);
+
+                if (i === startIndex) {
+                    showMessage(
+                        `${student.textContent} Sınıf ${i + 1} içine yerleştirildi.`,
+                        "success"
+                    );
+                } else {
+                    showMessage(
+                        `${student.textContent} hedef sınıf dolu olduğu için Sınıf ${i + 1} içine aktarıldı.`,
+                        "warning"
+                    );
+                }
+
+                return;
+            }
+        }
+
+        showMessage(
+            `${student.textContent} yerleştirilemedi. Bu sınıf ve sonraki sınıflar dolu.`,
+            "error"
+        );
+    }
+
+    function updateAllCounters() {
+        const classBoxes = document.querySelectorAll(".class-box");
+
+        classBoxes.forEach(box => {
+            const capacity = Number(box.dataset.capacity);
+            const currentCount = box.querySelectorAll(".student").length;
+            const counter = box.querySelector(".capacity");
+
+            counter.textContent = `${currentCount} / ${capacity}`;
+
+            if (currentCount >= capacity) {
+                box.classList.add("full");
+            } else {
+                box.classList.remove("full");
+            }
+
+            box.classList.remove("drag-over");
+        });
+    }
+
+    function showMessage(text, type) {
+        messageBox.innerHTML = `<span class="${type}">${text}</span>`;
+    }
+
+    function resetGame() {
+        createStudents();
+        updateAllCounters();
+
+        showMessage(
+            "Oyun sıfırlandı. Öğrencileri tekrar yerleştir.",
+            "warning"
+        );
+    }
+</script>
+
+</body>
+</html>
